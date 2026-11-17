@@ -21,15 +21,23 @@
 :- initialization(start).
 
 start :-
-    Port = 8080,
+    (   getenv('PORT', PA), atom_number(PA, Port)
+    ->  Deploy = true
+    ;   Port = 8080, Deploy = false
+    ),
     catch(( http_server(http_dispatch, [port(Port)]),
-            format("~nSakura Hanoi running at http://localhost:~w~n", [Port]),
-            catch(( use_module(library(www_browser)),
-                    format(atom(U), 'http://localhost:~w', [Port]),
-                    www_open_url(U) ), _, true) ),
+            format("~nSakura Hanoi running on port ~w~n", [Port]),
+            (   Deploy == true
+            ->  thread_get_message(_)
+            ;   (   catch(( use_module(library(www_browser)),
+                            format(atom(U), 'http://localhost:~w', [Port]),
+                            www_open_url(U) ), _, true)
+                ->  true
+                ;   true
+                )
+            ) ),
           E, ( print_message(error, E),
                format("Port ~w busy? Edit Port in start/0.~n", [Port]) )).
-
 % ---- Serve the page: HTML lives in the block comment at file end ----
 home(_) :-
     self_file(F),
